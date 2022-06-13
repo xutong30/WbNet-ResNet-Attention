@@ -43,7 +43,7 @@ def train(model, device, train_loader, valid_loader, epochs, lf, optimizer):
             loss_val += loss.item()
 
         train_loss = loss_val / len(train_loader)
-        accuracy = true_running / total_running
+        accuracy = torch.true_divide(true_running, total_running)
         print(f'Epoch - {epoch} Train - Loss : {train_loss} Accuracy : {accuracy}')
         output_file = open('output.txt', 'a')
         output_file.write(f'Epoch {epoch}/{epochs} - Train')
@@ -78,24 +78,25 @@ def train(model, device, train_loader, valid_loader, epochs, lf, optimizer):
 
         # calculating measurements
         valid_loss = valid_loss_val / len(train_loader)
-        accuracy = valid_true_running / valid_total_running
+        accuracy = torch.true_divide(valid_true_running, valid_total_running)
         print(f'Epoch - {epoch} Validation - Loss : {valid_loss} Accuracy : {accuracy}')
 
         # accuracy and loss
         output_file = open('output.txt', 'a')
         output_file.write(f'Epoch {epoch}/{epochs} - Validation')
-        output_file.write(f'loss: {valid_loss / len(train_loader)}')
+        output_file.write(f'loss: {valid_loss}')
         output_file.write('\n')
         output_file.write(f'accuracy: {accuracy}')
         output_file.write('\n')
 
         # precision, recall, f1-score
         output_file.write('\nClassification Report\n')
-        output_file.write(classification_report(y_test, y_pred))
+        output_file.write(classification_report(y_test, y_pred, zero_division=0))
         output_file.write('\n')
 
         # confusion matrix
         conf_matrix = confusion_matrix(y_test, y_pred)
+        output_file.write('\nConfusion Matrix\n')
         output_file.write(str(conf_matrix))
         output_file.write('\n')
 
@@ -111,7 +112,7 @@ def train(model, device, train_loader, valid_loader, epochs, lf, optimizer):
         # save best model and its performance report, can be used for futher training
         if accuracy > best_valid_acc:
             best_valid_acc = accuracy
-            best_model_report = classification_report(y_test, y_pred)
+            best_model_report = classification_report(y_test, y_pred, zero_division=0)
             torch.save(model.state_dict(), './resnet_attention.pth')
 
         # report the best training model
@@ -133,7 +134,9 @@ def main(t_csv, v_csv, b_size, t_device, lr, eps_num, ls_function, d_set):
     train_data = dataPreprocess.ListDataset(t_csv, label_list, "train", d_set)
     vali_data = dataPreprocess.ListDataset(v_csv, label_list, "validation", d_set)
 
+    print('loading training data')
     train_loader = DataLoader(train_data, b_size, shuffle=True)
+    print('loading validation data')
     vali_loader = DataLoader(vali_data, b_size, shuffle=True)
 
     resnet_model = model.resnet18_attention(1, 6)  # 1 channel, 6 classes
@@ -150,10 +153,10 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = torch.device("cpu")
     learning_rate = 2e-4
-    epochs = 2
+    epochs = 150
     loss_function = nn.CrossEntropyLoss()
 
     # dataset name = 'Abuzz' or 'Wingbeats'
     dataset_name = 'Abuzz'
 
-    main(train_csv, valid_csv, batch_size, device, learning_rate, epochs, loss_function)
+    main(train_csv, valid_csv, batch_size, device, learning_rate, epochs, loss_function, dataset_name)
